@@ -1,0 +1,1 @@
+Just like the old arcade game.  Use the arrow keys to move your ship and press the space bar to shoot.
