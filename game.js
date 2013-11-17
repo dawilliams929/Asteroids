@@ -1,131 +1,137 @@
-(function (root) {
-  var Asteroids = root.Asteroids = (root.Asteroids || {});
 
-  var Game = Asteroids.Game = function (ctx) {
-	  
-    this.ctx = ctx;
 
-    this.ship = new Asteroids.Ship([Game.DIM_X / 2, Game.DIM_Y / 2], this);
+(function(root) {
+	var Asteroids = root.Asteroids = (root.Asteroids || {});
+	
+	var Game = Asteroids.Game = function (ctx) {
+		this.ctx = ctx;
 
-    this.asteroids = [];
-    this.addAsteroids(Game.NUM_ASTEROIDS)
+    	this.ship = new Asteroids.Ship([Game.DIM_X / 2, Game.DIM_Y / 2], this);
 
-    this.bullets = [];
+    	this.asteroids = [];
+    	this.addAsteroids(Game.NUM_ASTEROIDS)
 
-    this.timerId = null;
-  };
+    	this.bullets = [];
 
-  Game.prototype.addAsteroids = function (numAsteroids) {
-    for (var i = 0; i < numAsteroids; i++) {
-      var asteroid = Asteroids.Asteroid.randomAsteroid(
-        Game.DIM_X, Game.DIM_Y, this
-      );
+    	this.timerId = null;
+	};
 
-      this.asteroids.push(asteroid);
-    }
-  };
+  	Game.prototype.addAsteroids = function(numAsteroids) {
+    	for (var i = 0; i < numAsteroids; i++) {
+      		var asteroid = Asteroids.Asteroid.randomAsteroid(
+        		Game.DIM_X, Game.DIM_Y, this
+      	  	);
+			
+			this.asteroids.push(asteroid);
+    	}
+  	};
 
-  Game.prototype.bindKeyHandlers = function () {
-    var game = this;
+  	Game.prototype.bindKeyHandlers = function() {
+    	var game = this;
 
-    var MOVES = {
-      "up": [ 0, -1],
-      "left": [-1,  0],
-      "right": [ 1,  0],
-      "down": [ 0,  1],
-    }
+    	var MOVES = {
+      	  	"up": [ 0, -1],
+      	  	"left": [-1,  0],
+      	  	"right": [ 1,  0],
+      	  	"down": [ 0,  1],
+    	};
+		
+		for (c in MOVES) {
+			(function(c, impulse) {
+				key(c, function() {
+					game.ship.power(impulse);
+				});
+			})(c, MOVES[c]);
+		}
 
-    for (c in MOVES) {
-      (function (c, impulse) {
-        key(c, function () { 
-			game.ship.power(impulse); 
+    	for (c in MOVES) {
+      	  	(function (c, impulse) {
+        		key(c, function() { 
+					game.ship.power(impulse); 
+				});
+      	  	})(c, MOVES[c]);
+    	}
+
+    	key("space", function() { 
+			game.fireBullet();
 		});
-      })(c, MOVES[c]);
-    };
+  	};
 
-    key("space", function () { 
-		game.fireBullet();
-	});
-  };
+  	Game.prototype.checkCollisions = function() {
+    	var game = this;
 
-  Game.prototype.checkCollisions = function () {
-    var game = this;
+    	this.asteroids.forEach(function(asteroid) {
+      	  	if (game.ship.isCollidedWith(asteroid)) {
+        		alert("Game over, man.  Game over.");
+        		game.stop();
+      	  	}
+    	});
+  	};
 
-    this.asteroids.forEach(function (asteroid) {
-      if (game.ship.isCollidedWith(asteroid)) {
-        alert("Game over, man.  Game over.");
-        game.stop();
-      }
-    });
-  };
+  	Game.prototype.draw = function() {
+    	var game = this;
+    	this.ctx.clearRect(0, 0, Game.DIM_X, Game.DIM_Y);
 
-  Game.prototype.draw = function () {
-    var game = this;
-    this.ctx.clearRect(0, 0, Game.DIM_X, Game.DIM_Y);
+    	var objects = [this.ship].concat(this.asteroids).concat(this.bullets);
+    	objects.forEach(function(object) {
+      	  	object.draw(game.ctx);
+    	});
+  	};
 
-    var objects = [this.ship].concat(this.asteroids).concat(this.bullets);
-    objects.forEach(function (object) {
-      object.draw(game.ctx);
-    });
-  };
+  	Game.prototype.fireBullet = function() {
+    	var bullet = this.ship.fireBullet();
 
-  Game.prototype.fireBullet = function () {
-    var bullet = this.ship.fireBullet();
+    	if (bullet) {
+      	  	// ship can't fire if not moving
+      		this.bullets.push(bullet);
+    	}
+  	};
 
-    if (bullet) {
-      // ship may not fire if still
-      this.bullets.push(bullet);
-    }
-  };
+  	Game.prototype.isOutOfBounds = function(pos) {
+    	return (pos[0] < 0) || (pos[1] < 0) || 
+		(pos[0] > Game.DIM_X) || (pos[1] > Game.DIM_Y);
+  	};
 
-  Game.prototype.isOutOfBounds = function (pos) {
-    return (pos[0] < 0) || (pos[1] < 0)
-      || (pos[0] > Game.DIM_X) || (pos[1] > Game.DIM_Y);
-  };
+  	Game.prototype.moveObjects = function() {
+    	var game = this;
 
-  Game.prototype.moveObjects = function () {
-    var game = this;
+    	var objects = [this.ship].concat(this.asteroids).concat(this.bullets);
+    	objects.forEach(function(object) {
+      	  	object.move();
 
-    var objects = [this.ship].concat(this.asteroids).concat(this.bullets);
-    objects.forEach(function (object) {
-      object.move();
+      	  	if (game.isOutOfBounds(object.pos)) {
+        		object.remove();
+      	  	}
+    	});
+  	};
 
-      if (game.isOutOfBounds(object.pos)) {
-        object.remove();
-      }
-    });
-  };
+  	Game.prototype.removeBullet = function(bullet) {
+    	this.bullets.splice(this.bullets.indexOf(bullet), 1);
+  	};
 
-  Game.prototype.removeBullet = function (bullet) {
-    this.bullets.splice(this.bullets.indexOf(bullet), 1);
-  };
+  	Game.prototype.removeAsteroid = function(asteroid) {
+    	this.asteroids.splice(this.asteroids.indexOf(asteroid), 1);
+  	};
 
-  Game.prototype.removeAsteroid = function (asteroid) {
-    this.asteroids.splice(this.asteroids.indexOf(asteroid), 1);
-  };
+  	Game.prototype.start = function() {
+    	this.timerId = setInterval(this.step.bind(this), (1000 / Game.FPS));
 
-  Game.prototype.start = function () {
-    this.timerId = setInterval(
-      this.step.bind(this),
-      1000 / Game.FPS
-    );
+    	this.bindKeyHandlers();
+  	};
 
-    this.bindKeyHandlers();
-  };
+  	Game.prototype.step = function() {
+    	this.moveObjects();
+    	this.draw();
 
-  Game.prototype.step = function () {
-    this.moveObjects();
-    this.draw();
+    	this.checkCollisions();
+  	};
 
-    this.checkCollisions();
-  };
+  	Game.prototype.stop = function() {
+    	clearInterval(this.timerId);
+  	};
 
-  Game.prototype.stop = function () {
-    clearInterval(this.timerId);
-  };
-
-  Game.FPS = 50;
-  Game.DIM_X = 1000;
-  Game.DIM_Y = 600;
-  Game.NUM_ASTEROIDS = 20;
+  	Game.FPS = 50;
+  	Game.DIM_X = 1000;
+  	Game.DIM_Y = 600;
+  	Game.NUM_ASTEROIDS = 20;
 })(this);
